@@ -1,51 +1,78 @@
+#include "utils.h"
+#include "pattern_recognition.h"
 #include <iostream>
-#include <vector>
-#include <cmath>
-#include <limits>
-#include <omp.h>
-
-// Fonction pour calculer la SAD entre un motif et une sous-série
-int calculate_SAD(const std::vector<int>& pattern, const std::vector<int>& sub_series) {
-    int sad = 0;
-    for (size_t i = 0; i < pattern.size(); ++i) {
-        sad += std::abs(pattern[i] - sub_series[i]);
-    }
-    return sad;
-}
-
-// Fonction pour trouver le motif dans la longue série en utilisant OpenMP
-std::pair<int, int> find_pattern_in_series(const std::vector<int>& pattern, const std::vector<int>& long_series) {
-    int pattern_length = pattern.size();
-    int series_length = long_series.size();
-
-    int min_sad = std::numeric_limits<int>::max();
-    int best_index = -1;
-
-#pragma omp parallel for
-    for (int i = 0; i <= series_length - pattern_length; ++i) {
-        std::vector<int> sub_series(long_series.begin() + i, long_series.begin() + i + pattern_length);
-        int sad = calculate_SAD(pattern, sub_series);
-
-#pragma omp critical
-        {
-            if (sad < min_sad) {
-                min_sad = sad;
-                best_index = i;
-            }
-        }
-    }
-
-    return {best_index, min_sad};
-}
 
 int main() {
-    std::vector<int> pattern = {0, 1, 1};
-    std::vector<int> long_series = {0, 1, 1, 2, 3, 4, 5, 1, 2, 3, 4, 1, 2, 3, 1, 2, 3};
+    // Définir la série temporelle cible
+    std::vector<double> target_series = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    auto result = find_pattern_in_series(pattern, long_series);
+    // Charger les données à partir du chemin spécifié
+    std::string file_path = "/home/dylan/CLionProjects/ProjectWorkPatternRecognition/data/Mcompetitions M4-methods Dataset/Monthly-train.csv";
+    std::vector<std::vector<double>> dataset = load_data(file_path);
 
-    std::cout << "Le motif est trouvé à l'indice " << result.first
-              << " avec une valeur SAD de " << result.second << std::endl;
+    if (dataset.empty()) {
+        std::cerr << "Erreur: le jeu de données est vide ou n'a pas été chargé correctement." << std::endl;
+        return 1;
+    }
 
-    return 0;
+    // Charger les données à partir du fichier CSV
+    std::vector<std::vector<double>> original_data = load_data(file_path);
+
+    if (original_data.empty()) {
+        std::cerr << "Aucune donnée n'a été chargée à partir du fichier." << std::endl;
+        return 1;
+    }
+
+    // Définir les tailles du dataset à générer
+    //size_t num_datasets = 7; // Nombre de datasets à générer
+    std::vector<size_t> dataset_sizes = {10000, 25000, 50000, 75000, 100000, 200000, 500000}; // Tailles des datasets à générer
+
+    // Générer et afficher les datasets aléatoires pour chaque taille spécifiée
+    for (size_t size : dataset_sizes) {
+        size_t series_length = target_series.size(); // Longueur de la série temporelle
+        std::vector<std::vector<double>> random_dataset = generate_random_dataset(original_data, size, original_data[0].size());
+
+
+        // Mesurer le temps d'exécution pour la version séquentielle
+        double sequential_time = measure_execution_time([&]() {
+            find_most_similar_series(target_series, dataset);
+        });
+
+        // Mesurer le temps d'exécution pour la version parallèle avec OpenMP
+        double parallel_time = measure_execution_time([&]() {
+            find_most_similar_series_par(target_series, dataset);
+        });
+
+        // Afficher les résultats
+        std::cout << "Taille du dataset : " << size << " x " << series_length << std::endl;
+        std::cout << "Temps d'exécution séquentiel : " << sequential_time << " secondes" << std::endl;
+        std::cout << "Temps d'exécution parallèle (OpenMP) : " << parallel_time << " secondes" << std::endl;
+        std::cout << std::endl;
+
+/*        // Affichage de quelques exemples pour vérifier
+        std::cout << "Exemples du dataset aléatoire de taille " << size << " x " << original_data[0].size() << " : " << std::endl;
+        for (size_t i = 0; i < std::min(size_t(3), size); ++i) {
+            std::cout << "Série " << i << ": ";
+            for (double value : random_dataset[i]) {
+                std::cout << value << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;*/
+    }
+
+    /*// Trouver en mode parallel la série temporelle la plus similaire
+    auto result = find_most_similar_series_par(target_series, dataset);
+    int best_index = result.first;
+    double min_sad = result.second;
+
+    std::cout << "La série temporelle la plus similaire est à l'indice " << best_index << " avec une valeur SAD de " << min_sad << std::endl;
+
+    // Trouver la série temporelle la plus similaire
+    result = find_most_similar_series(target_series, dataset);
+    best_index = result.first;
+    min_sad = result.second;
+
+    std::cout << "La série temporelle la plus similaire est à l'indice " << best_index << " avec une valeur SAD de " << min_sad << std::endl;
+    return 0;*/
 }

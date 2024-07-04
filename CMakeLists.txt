@@ -5,5 +5,8 @@ project(ProjectWorkPatternRecognition)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fopenmp")
 
 add_executable(ProjectWorkPatternRecognition main.cpp
-        pattern_recognition_seq.cpp
-        pattern_recognition_parallel.cpp)
+        pattern_recognition.cpp
+        utils.cpp
+        utils.h
+        pattern_recognition.h
+)
