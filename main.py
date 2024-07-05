@@ -1,6 +1,6 @@
-from utils import load_data, generate_random_dataset, measure_execution_time
+from utils import load_data, generate_random_dataset, measure_execution_time, measure_execution_time_async
 import numpy as np
-from pattern_recognition import find_most_similar_series_sequential, find_most_similar_series_parallel
+from pattern_recognition import find_most_similar_series_sequential, find_most_similar_series_parallel, find_most_similar_series_async
 import asyncio
 
 
@@ -35,10 +35,14 @@ async def main():
         # Mesurer le temps d'exécution pour la version parallèle
         parallel_time = measure_execution_time(lambda: find_most_similar_series_parallel(target_series, dataset))
 
+        # Mesurer le temps d'exécution pour la version asynchrone
+        async_time = await measure_execution_time_async(lambda: find_most_similar_series_async(target_series, dataset))
+
         # Afficher les résultats
         print(f"Taille du dataset : {num_series} x {series_length}")
         print(f"Temps d'exécution séquentiel : {sequential_time:.4f} secondes")
         print(f"Temps d'exécution parallèle : {parallel_time:.4f} secondes")
+        print(f"Temps d'exécution asynchrone (asyncio) : {async_time:.4f} secondes")
         print()
 
 if __name__ == "__main__":

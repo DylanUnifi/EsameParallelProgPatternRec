@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 import time
+import asyncio
 
 
 def calculate_sad(series1, series2):
@@ -63,3 +64,43 @@ def measure_execution_time(func):
     func()
     end = time.time()
     return end - start
+
+
+# Fonction pour mesurer le temps d'exécution d'une fonction asynchrone
+async def measure_execution_time_async(func):
+    start = time.time()
+    await func()
+    end = time.time()
+    return end - start
+
+
+# Fonction asynchrone pour traiter une série temporelle
+async def process_series(i, series, target_series):
+    local_min_sad = float('inf')
+    local_best_index = -1
+
+    if len(series) >= len(target_series):
+        for j in range(len(series) - len(target_series) + 1):
+            sub_series = series[j:j + len(target_series)]
+            sad = calculate_sad(target_series, sub_series)
+            if sad < local_min_sad:
+                local_min_sad = sad
+                local_best_index = i
+
+    return local_best_index, local_min_sad
+
+
+# Fonction pour trouver la série temporelle la plus similaire (version asynchrone avec asyncio)
+async def find_most_similar_series_async(target_series, dataset):
+    tasks = [process_series(i, series, target_series) for i, series in enumerate(dataset)]
+    results = await asyncio.gather(*tasks)
+
+    min_sad = float('inf')
+    best_index = -1
+
+    for local_best_index, local_min_sad in results:
+        if local_min_sad < min_sad:
+            min_sad = local_min_sad
+            best_index = local_best_index
+
+    return best_index, min_sad

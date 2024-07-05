@@ -1,5 +1,6 @@
-from  utils import calculate_sad
+from utils import calculate_sad, process_series
 from joblib import Parallel, delayed
+import asyncio
 
 
 # Fonction pour trouver la série temporelle la plus similaire (version séquentielle)
@@ -48,3 +49,18 @@ def find_most_similar_series_parallel(target_series, dataset):
 
     return best_index, min_sad
 
+
+# Fonction pour trouver la série temporelle la plus similaire (version asynchrone avec asyncio)
+async def find_most_similar_series_async(target_series, dataset):
+    tasks = [process_series(i, series, target_series) for i, series in enumerate(dataset)]
+    results = await asyncio.gather(*tasks)
+
+    min_sad = float('inf')
+    best_index = -1
+
+    for local_best_index, local_min_sad in results:
+        if local_min_sad < min_sad:
+            min_sad = local_min_sad
+            best_index = local_best_index
+
+    return best_index, min_sad
