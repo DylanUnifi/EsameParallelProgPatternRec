@@ -21,7 +21,7 @@ def find_most_similar_series_sequential(target_series, dataset):
 
 
 # Fonction pour trouver la série temporelle la plus similaire (version parallèle)
-def find_most_similar_series_parallel(target_series, dataset):
+def find_most_similar_series_parallel(target_series, dataset, n_jobs):
     min_sad = float('inf')
     best_index = -1
 
@@ -40,23 +40,7 @@ def find_most_similar_series_parallel(target_series, dataset):
 
         return local_best_index, local_min_sad
 
-    results = Parallel(n_jobs=-1)(delayed(process_series)(i, series) for i, series in enumerate(dataset))
-
-    for local_best_index, local_min_sad in results:
-        if local_min_sad < min_sad:
-            min_sad = local_min_sad
-            best_index = local_best_index
-
-    return best_index, min_sad
-
-
-# Fonction pour trouver la série temporelle la plus similaire (version asynchrone avec asyncio)
-async def find_most_similar_series_async(target_series, dataset):
-    tasks = [process_series(i, series, target_series) for i, series in enumerate(dataset)]
-    results = await asyncio.gather(*tasks)
-
-    min_sad = float('inf')
-    best_index = -1
+    results = Parallel(n_jobs=n_jobs)(delayed(process_series)(i, series) for i, series in enumerate(dataset))
 
     for local_best_index, local_min_sad in results:
         if local_min_sad < min_sad:

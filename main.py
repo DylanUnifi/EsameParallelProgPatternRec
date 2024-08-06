@@ -1,12 +1,13 @@
-from utils import load_data, generate_random_dataset, measure_execution_time, measure_execution_time_async
+from utils import load_data, generate_random_dataset, measure_execution_time
 import numpy as np
-from pattern_recognition import find_most_similar_series_sequential, find_most_similar_series_parallel, find_most_similar_series_async
+from pattern_recognition import find_most_similar_series_sequential, find_most_similar_series_parallel
 import asyncio
+import csv
 
 
 async def main():
     # Chemin vers le fichier CSV
-    file_path = r"data/Mcompetitions M4-methods Dataset/Monthly-train.csv"
+    file_path = r"/home/dylan/PycharmProjects/EsameParallelProgPatternRec/data/Monthly-train.csv"
 
     # Charger les données à partir du fichier CSV
     original_data = load_data(file_path)
@@ -23,27 +24,64 @@ async def main():
 
     # Définir les tailles du dataset à générer
     dataset_sizes = [100, 500, 1000, 5000, 10000]  # Tailles des datasets à générer
+    num_threads = [1, 2, 4, 8, 16]
 
-    for num_series in dataset_sizes:
+    with open('/home/dylan/PycharmProjects/EsameParallelProgPatternRec/data/benchmark_csv/num_threads_speedup.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['NumThreads', ' : ', "Speedup: "])
+        for num_thread in num_threads:
+            num_runs = 1
+            dataset = generate_random_dataset(original_data, 10000, series_length)
+            avgSequentialTime = 0;
+            avgParallelTime = 0;
+            avgSpeedup = 0;
+            temp_run = num_runs
+            while (temp_run > 0):
+                # Mesurer le temps d'exécution pour la version séquentielle
+                sequential_time = measure_execution_time(
+                    lambda: find_most_similar_series_sequential(target_series, dataset))
+                print(f"Temps d'exécution séquentiel : {sequential_time:.4f} secondes")
+                avgSequentialTime += sequential_time
 
-        # Générer un dataset de taille num_series x series_length
-        dataset = generate_random_dataset(original_data, num_series, series_length)
+                # Mesurer le temps d'exécution pour la version parallèle
+                parallel_time = measure_execution_time(lambda: find_most_similar_series_parallel(target_series, dataset, num_thread))
+                print(f"Temps d'exécution parallèle : {parallel_time:.4f} secondes")
+                avgParallelTime += parallel_time
 
-        # Mesurer le temps d'exécution pour la version séquentielle
-        sequential_time = measure_execution_time(lambda: find_most_similar_series_sequential(target_series, dataset))
+                avgSpeedup += sequential_time / parallel_time;
+                temp_run -= 1
+            avgSpeedup = avgSpeedup / num_runs
+            writer = csv.writer(csvfile)
+            writer.writerow([num_thread, ' , ', avgSpeedup])
 
-        # Mesurer le temps d'exécution pour la version parallèle
-        parallel_time = measure_execution_time(lambda: find_most_similar_series_parallel(target_series, dataset))
+    with open('/home/dylan/PycharmProjects/EsameParallelProgPatternRec/data/benchmark_csv/length_dataset_speedup.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['Dataset Length', ' : ', "Speedup: "])
+        for num_series in dataset_sizes:
+            # Générer un dataset de taille num_series x series_length
+            dataset = generate_random_dataset(original_data, num_series, series_length)
+            print(f"Taille du dataset : {num_series} x {series_length}")
+            avgSequentialTime = 0; avgParallelTime = 0; avgSpeedup = 0;
+            num_runs = 1
+            temp_run = num_runs
+            while(temp_run > 0):
 
-        # Mesurer le temps d'exécution pour la version asynchrone
-        async_time = await measure_execution_time_async(lambda: find_most_similar_series_async(target_series, dataset))
+                # Mesurer le temps d'exécution pour la version séquentielle
+                sequential_time = measure_execution_time(lambda: find_most_similar_series_sequential(target_series, dataset))
+                print(f"Temps d'exécution séquentiel : {sequential_time:.4f} secondes")
+                avgSequentialTime += sequential_time
 
-        # Afficher les résultats
-        print(f"Taille du dataset : {num_series} x {series_length}")
-        print(f"Temps d'exécution séquentiel : {sequential_time:.4f} secondes")
-        print(f"Temps d'exécution parallèle : {parallel_time:.4f} secondes")
-        print(f"Temps d'exécution asynchrone (asyncio) : {async_time:.4f} secondes")
-        print()
+                # Mesurer le temps d'exécution pour la version parallèle
+                parallel_time = measure_execution_time(lambda: find_most_similar_series_parallel(target_series, dataset, 8))
+                print(f"Temps d'exécution parallèle : {parallel_time:.4f} secondes")
+                avgParallelTime += parallel_time
+
+                avgSpeedup += sequential_time / parallel_time;
+                temp_run -= 1
+            avgSpeedup = avgSpeedup / num_runs
+            writer = csv.writer(csvfile)
+            writer.writerow([num_series, ' , ', avgSpeedup])
+
 
 if __name__ == "__main__":
     asyncio.run(main())
